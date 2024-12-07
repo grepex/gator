@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -51,5 +52,34 @@ func handlerCreateUser(s *state, cmd command) error {
 	}
 
 	fmt.Println("Successfully created user: ", user)
+	return nil
+}
+
+func reset(s *state, cmd command) error {
+	err := s.db.DeleteUsers(context.Background())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Removed all users from users table")
+	os.Exit(0)
+
+	return nil
+}
+
+func handlerGetUser(s *state, cmd command) error {
+	users, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, user := range users {
+		if user.Name == s.cfg.CurrentUserName {
+			fmt.Printf("* %s (current)\n", user.Name)
+		} else {
+			fmt.Printf("* %s\n", user.Name)
+		}
+	}
+
 	return nil
 }
