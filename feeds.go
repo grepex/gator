@@ -8,6 +8,10 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/grepex/gator/internal/database"
 )
 
 type RSSFeed struct {
@@ -62,7 +66,6 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	feed.Channel.Title = html.UnescapeString(feed.Channel.Title)
 	feed.Channel.Description = html.UnescapeString(feed.Channel.Description)
 
-	// TODO: fix this
 	for i := range feed.Channel.Item {
 		feed.Channel.Item[i].Title = html.UnescapeString(feed.Channel.Item[i].Title)
 		feed.Channel.Item[i].Description = html.UnescapeString(feed.Channel.Item[i].Description)
@@ -70,4 +73,48 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	fmt.Println("Feed struct after cleaning: ", &feed)
 
 	return &feed, nil
+}
+
+func addFeed(s *state, cmd command) error {
+	if len(cmd.arguments) < 2 {
+		return errors.New("addfeed usage <... name url>")
+	}
+
+	currentUser, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return err
+	}
+
+	createFeedParams := database.CreateFeedParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      cmd.arguments[0],
+		Url:       cmd.arguments[1],
+		UserID:    currentUser.ID,
+	}
+
+	err = s.db.CreateFeed(context.Background(), createFeedParams)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Created feed: ", createFeedParams)
+
+	return nil
+}
+
+func showFeeds(s *state, cmd command) error {
+	// TODO: Implement this
+	feeds, err := s.db.ShowFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, feed := range feeds {
+		fmt.Printf("%s - %s - %s\n", feed.Name, feed.Url, feed.Username.String)
+	}
+
+	return nil
+
 }
